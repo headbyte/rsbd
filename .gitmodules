@@ -1,0 +1,9 @@
+[submodule "lib/catch2"]
+	path = lib/catch2
+	url = https://github.com/catchorg/Catch2.git
+[submodule "lib/cryptopp"]
+	path = lib/cryptopp
+	url = https://github.com/weidai11/cryptopp.git
+[submodule "lib/stduuid"]
+	path = lib/stduuid
+	url = https://github.com/mariusbancila/stduuid.git
