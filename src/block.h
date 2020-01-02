@@ -39,6 +39,12 @@ namespace rsbd {
         block_size_t size;
         buffer data;
 
+        void init_empty(block_size_t size, block_id_t id = 0) {
+            this->id = id;
+            this->size = size;
+            data.resize(size, 0);
+        }
+
         block_hash get_hash() {
             if (this->hash.calculated) {
                 return this->hash;
@@ -53,8 +59,6 @@ namespace rsbd {
     protected:
         block_hash hash;
     };
-
-
 
 
     struct multi_file_block_storage {

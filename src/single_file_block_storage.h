@@ -129,10 +129,13 @@ namespace rsbd {
         }
 
         void create_stream(block_size_t block_size, block_id_t block_count) {
-            size_t total_file_size = block_count * block_size;
-            stream_ptr->seekp(total_file_size - 1);
+            block b;
+            b.init_empty(block_size);
+
             char empty_byte = 0;
-            stream_ptr->write(&empty_byte, 1);
+            for (int i = 0; i < block_count; ++i) {
+                stream_ptr->write(&empty_byte, 1);
+            }
 
             header.init(block_count);
             header.block_size = block_size;
