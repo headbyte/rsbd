@@ -7,7 +7,7 @@
 using namespace rsbd;
 
 
-TEST_CASE("single block storage header test", "[single]") {
+TEST_CASE("single file block storage header test", "[single]") {
     single_file_block_storage_index header;
     header.init(2);
     header.starting_block = 0;
@@ -30,7 +30,7 @@ TEST_CASE("single block storage header test", "[single]") {
     REQUIRE(header.hashes == header2.hashes);
 }
 
-TEST_CASE("single block storage test", "[single]") {
+TEST_CASE("single file block storage test", "[single]") {
 
     SECTION("create a single file block storage as file") {
         {
@@ -118,3 +118,4 @@ TEST_CASE("single block storage test", "[single]") {
 
 
 }
+

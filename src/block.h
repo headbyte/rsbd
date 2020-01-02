@@ -35,15 +35,16 @@ namespace rsbd {
     };
 
     struct block {
+
+        block() {}
+
+        block(block_id_t id, block_size_t size) : id(id), size(size) {
+            data.resize(size, 0);
+        }
+
         block_id_t id;
         block_size_t size;
         buffer data;
-
-        void init_empty(block_size_t size, block_id_t id = 0) {
-            this->id = id;
-            this->size = size;
-            data.resize(size, 0);
-        }
 
         block_hash get_hash() {
             if (this->hash.calculated) {

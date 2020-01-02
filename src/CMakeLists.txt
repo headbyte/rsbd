@@ -3,7 +3,7 @@ project (rsbd)
 
 include_directories(../lib/stduuid/include)
 
-set(RSBD_LIBRARY_SOURCE block.cpp binary.h block_storage.h)
+set(RSBD_LIBRARY_SOURCE block.cpp binary.h block_storage.h block_storage_sync.h)
 
 add_executable(rsbd rsbd.cpp ${RSBD_LIBRARY_SOURCE})
 

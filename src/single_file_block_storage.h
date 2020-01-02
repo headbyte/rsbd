@@ -129,8 +129,7 @@ namespace rsbd {
         }
 
         void create_stream(block_size_t block_size, block_id_t block_count) {
-            block b;
-            b.init_empty(block_size);
+            block b(0, block_size);
 
             char empty_byte = 0;
             for (int i = 0; i < block_count; ++i) {
@@ -255,6 +254,12 @@ namespace rsbd {
         }
 
         const block_hash &get_block_hash_from_header(block_id_t id) {
+            return header.hashes[id];
+        }
+
+        block_hash get_block_hash(block_id_t id) override {
+            // TODO: in future when we have lot of hashes, we might not want to store them in memory to keep memory
+            //  usage low, and we might need to update this function to read hashes from disk
             return header.hashes[id];
         }
 
