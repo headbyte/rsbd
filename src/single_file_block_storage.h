@@ -122,42 +122,72 @@ namespace rsbd {
     };
 
     struct single_file_block_storage : public block_storage {
+    protected:
+        void open_stream() {
+            stream_ptr->seekg(0, std::ios_base::end);
+            header.reverse_deserialize(*stream_ptr);
+        }
+
+        void create_stream(block_size_t block_size, block_id_t block_count) {
+            size_t total_file_size = block_count * block_size;
+            stream_ptr->seekp(total_file_size - 1);
+            char empty_byte = 0;
+            stream_ptr->write(&empty_byte, 1);
+
+            header.init(block_count);
+            header.block_size = block_size;
+
+            header.serialize(*stream_ptr);
+        }
+
+    public:
+
+        void open(std::shared_ptr<std::iostream> stream) {
+            stream_ptr = stream;
+            open_stream();
+        }
+
         void open(std::string path) {
             this->path = path;
-            stream.open(path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+
+            stream_ptr = std::make_shared<std::fstream>(
+                    path,
+                    std::ios_base::in | std::ios_base::out | std::ios_base::binary
+            );
 
             if (!is_ready()) {
                 throw std::runtime_error("file open failed");
             }
 
-            stream.seekg(0, std::ios_base::end);
-            header.reverse_deserialize(stream);
+            open_stream();
         }
 
         const std::string &get_path() const {
             return path;
         }
 
+        void create(std::shared_ptr<std::iostream> stream, block_size_t block_size, block_id_t block_count) {
+            stream_ptr = stream;
+            create_stream(block_size, block_count);
+        }
+
+
         void create(std::string path, block_size_t block_size, block_id_t block_count) {
             this->path = path;
-            stream.open(path, std::ios_base::trunc | std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+            stream_ptr = std::make_shared<std::fstream>(
+                    path,
+                    std::ios_base::trunc | std::ios_base::in | std::ios_base::out | std::ios_base::binary
+            );
+
             if (!is_ready()) {
                 throw std::runtime_error("file create failed");
             }
 
-            size_t total_file_size = block_count * block_size;
-            stream.seekp(total_file_size - 1);
-            char empty_byte = 0;
-            stream.write(&empty_byte, 1);
-
-            header.init(block_count);
-            header.block_size = block_size;
-
-            header.serialize(stream);
+            create_stream(block_size, block_count);
         }
 
         bool is_ready() override {
-            return stream.is_open() && stream.good();
+            return stream_ptr != nullptr && !stream_ptr->bad();
         }
 
         size_t get_block_position(block_id_t id) {
@@ -179,8 +209,8 @@ namespace rsbd {
             b.data.resize(b.size);
 
             std::lock_guard<std::mutex> guard(stream_mutex);
-            stream.seekg(get_block_position(id), std::ios_base::beg);
-            stream.read((char *) b.data.data(), b.size);
+            stream_ptr->seekg(get_block_position(id), std::ios_base::beg);
+            stream_ptr->read((char *) b.data.data(), b.size);
             return true;
         }
 
@@ -206,10 +236,10 @@ namespace rsbd {
             }
 
             std::lock_guard<std::mutex> guard(stream_mutex);
-            stream.seekp(get_block_position(b.id), std::ios_base::beg);
-            stream.write((char *) b.data.data(), b.size);
+            stream_ptr->seekp(get_block_position(b.id), std::ios_base::beg);
+            stream_ptr->write((char *) b.data.data(), b.size);
 
-            header.update_block_information(stream, b);
+            header.update_block_information(*stream_ptr, b);
         }
 
         virtual block_id_t get_block_count() override {
@@ -218,7 +248,7 @@ namespace rsbd {
 
         void close() {
             std::lock_guard<std::mutex> guard(stream_mutex);
-            stream.close();
+            stream_ptr = nullptr;
         }
 
         const block_hash &get_block_hash_from_header(block_id_t id) {
@@ -228,7 +258,11 @@ namespace rsbd {
     protected:
         single_file_block_storage_index header;
         std::string path;
-        std::fstream stream;
+
+        std::shared_ptr<std::iostream> stream_ptr{nullptr};
+        //std::unique_ptr<std::iostream> stream_ptr;
+        //std::fstream stream;
+
         std::mutex stream_mutex;
     };
 }
