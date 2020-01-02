@@ -1,7 +1,7 @@
 #include <iostream>
 using namespace std;
 
-#include "block.h"
+#include "single_file_block_storage.h"
 
 int main(int argc, char **argv) {
 	cout << "Hello world";

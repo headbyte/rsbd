@@ -2,7 +2,7 @@
 #include <catch2/catch.hpp>
 #include <sstream>
 #include <iostream>
-#include "block.h"
+#include "single_file_block_storage.h"
 
 using namespace rsbd;
 
