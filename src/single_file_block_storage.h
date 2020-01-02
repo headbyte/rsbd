@@ -15,9 +15,9 @@ namespace rsbd {
         std::vector<char> block_map;
 
         size_t hashes_start = 0;
-        std::vector <block_hash> hashes;
+        std::vector<block_hash> hashes;
 
-        block_id_t starting_block = 0; // UNUSED AT THE MOMENT, UPDATE GET,SET FUNCTIONS TO UTILISE THIS
+        block_id_t starting_block = 0; // TODO: unused at the moment, UPDATE GET,SET FUNCTIONS TO UTILISE THIS
         block_size_t block_size = 0;
         block_id_t block_count = 0;
         char magic[4]; // "RSBD"
@@ -118,12 +118,6 @@ namespace rsbd {
 
         void deserialize(std::istream &input) override {
             throw std::logic_error("you shouldn't deserialize this in normal order");
-//            read(input, this->block_map)
-//
-//            read(input, starting_block);
-//            read(input, block_size);
-//            read(input, block_count);
-//            read(input, magic, 4);
         }
     };
 
@@ -167,7 +161,7 @@ namespace rsbd {
         }
 
         size_t get_block_position(block_id_t id) {
-            // TODO: CHECK VALUES HERE
+            // TODO: CHECK VALUES HERE with assert
             return header.block_size * id;
         }
 
@@ -184,7 +178,7 @@ namespace rsbd {
             b.size = get_block_size(id);
             b.data.resize(b.size);
 
-            std::lock_guard <std::mutex> guard(stream_mutex);
+            std::lock_guard<std::mutex> guard(stream_mutex);
             stream.seekg(get_block_position(id), std::ios_base::beg);
             stream.read((char *) b.data.data(), b.size);
             return true;
@@ -211,7 +205,7 @@ namespace rsbd {
                 throw std::logic_error("not ready");
             }
 
-            std::lock_guard <std::mutex> guard(stream_mutex);
+            std::lock_guard<std::mutex> guard(stream_mutex);
             stream.seekp(get_block_position(b.id), std::ios_base::beg);
             stream.write((char *) b.data.data(), b.size);
 
@@ -223,7 +217,7 @@ namespace rsbd {
         }
 
         void close() {
-            std::lock_guard <std::mutex> guard(stream_mutex);
+            std::lock_guard<std::mutex> guard(stream_mutex);
             stream.close();
         }
 
