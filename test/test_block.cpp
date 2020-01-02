@@ -75,39 +75,44 @@ TEST_CASE("single block storage test", "[single]") {
 
 
     SECTION("create a single file block storage in memory") {
-        single_file_block_storage single_file_storage_writer;
         auto memory = std::make_shared<std::stringstream>();
 
-        single_file_storage_writer.create(memory, 1, 8);
+        {
+            single_file_block_storage single_file_storage_writer;
 
-        for (int i = 0; i < 8; ++i) {
-            block b;
-            b.id = i;
-            b.size = 1;
-            b.data.push_back(i);
-            single_file_storage_writer.set_block(b);
+            single_file_storage_writer.create(memory, 1, 8);
+
+            for (int i = 0; i < 8; ++i) {
+                block b;
+                b.id = i;
+                b.size = 1;
+                b.data.push_back(i);
+                single_file_storage_writer.set_block(b);
+            }
         }
 
-        single_file_block_storage sfbs;
-        sfbs.open(memory);
+        {
+            single_file_block_storage sfbs;
+            sfbs.open(memory);
 
-        REQUIRE(sfbs.get_block_count() == 8);
-        REQUIRE(sfbs.get_block_size(0) == 1);
-        // TODO: remove get_block_size id parameter since it is better to have all blocks same size
+            REQUIRE(sfbs.get_block_count() == 8);
+            REQUIRE(sfbs.get_block_size(0) == 1);
+            // TODO: remove get_block_size id parameter since it is better to have all blocks same size
 
-        for (size_t i = 0; i < sfbs.get_block_count(); i++) {
-            REQUIRE(sfbs.has_block(i) == true);
+            for (size_t i = 0; i < sfbs.get_block_count(); i++) {
+                REQUIRE(sfbs.has_block(i) == true);
 
-            block b;
-            REQUIRE (sfbs.get_block(i, b) == true);
-            REQUIRE(b.size == 1);
-            REQUIRE(b.id == i);
-            REQUIRE(b.data[0] == i);
+                block b;
+                REQUIRE (sfbs.get_block(i, b) == true);
+                REQUIRE(b.size == 1);
+                REQUIRE(b.id == i);
+                REQUIRE(b.data[0] == i);
 
-            auto hash = b.get_hash();
-            auto hash2 = sfbs.get_block_hash_from_header(i);
+                auto hash = b.get_hash();
+                auto hash2 = sfbs.get_block_hash_from_header(i);
 
-            REQUIRE((hash == hash2) == true);
+                REQUIRE((hash == hash2) == true);
+            }
         }
     }
 
