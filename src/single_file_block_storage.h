@@ -133,7 +133,7 @@ namespace rsbd {
 
             char empty_byte = 0;
             for (int i = 0; i < block_count; ++i) {
-                stream_ptr->write(&empty_byte, 1);
+                stream_ptr->write((char *) b.data.data(), b.size);
             }
 
             header.init(block_count);
