@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.rsbd.rsbd";
+option java_outer_classname = "RsbdProto";
+option objc_class_prefix = "RSBD";
+
+package rsbd;
+
+service BlockDiskService {
+    // List available block disks hosted on this server
+    rpc list (Empty) returns (ListResponse) {}
+
+    // Open a block disk with its uuid
+    rpc open (OpenRequest) returns (OpenReply) {}
+
+    // Close an already opened block disk with its id
+    rpc close (CloseRequest) returns (CloseResponse) {}
+    rpc get_block_size (GetBlockSizeRequest) returns (GetBlockSizeResponse) {}
+    rpc get_block_count (GetBlockSizeRequest) returns (GetBlockCountResponse) {}
+    rpc get_block (GetBlockRequest) returns (GetBlockResponse) {}
+    rpc set_block (SetBlockRequest) returns (SetBlockResponse) {}
+    rpc has_block (HasBlockRequest) returns (HasBlockResponse) {}
+    rpc delete_block (HasBlockRequest) returns (SetBlockResponse) {}
+    rpc get_block_hash (HasBlockRequest) returns (GetBlockHashResponse) {}
+}
+
+message Empty {
+
+}
+
+message ListItem {
+    string uuid = 1;
+    uint64 block_size = 2;
+    uint64 block_count = 3;
+}
+
+message ListResponse {
+    string error = 1;
+    repeated ListItem items = 2;
+}
+
+message OpenRequest {
+    string disk_uuid = 1;
+}
+
+message OpenReply {
+    uint32 disk_id = 1;
+    string error = 2;
+}
+
+
+message CloseRequest {
+    uint32 id = 1;
+}
+
+message CloseResponse {
+    uint32 disk_id = 1;
+    bool done = 2;
+    string error = 3;
+}
+
+message GetBlockSizeRequest {
+    uint32 disk_id = 1;
+}
+
+message GetBlockSizeResponse {
+    uint32 disk_id = 1;
+    uint64 block_size = 2;
+    string error = 3;
+}
+
+
+message GetBlockCountResponse {
+    uint32 disk_id = 1;
+    uint64 block_count = 2;
+    string error = 3;
+}
+
+message GetBlockRequest {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+}
+
+message GetBlockResponse {
+    string error = 1;
+    bool exists = 2;
+    uint32 disk_id = 3;
+    uint64 id = 4;
+    uint32 size = 5;
+    bytes data = 6;
+    bytes hash = 7;
+}
+
+message SetBlockRequest {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+    uint32 size = 3;
+    bytes data = 4;
+    bytes hash = 5;
+}
+
+message SetBlockResponse {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+    bool successful = 3;
+    string error = 4;
+}
+
+message HasBlockRequest {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+}
+
+message HasBlockResponse {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+    bool has_block = 3;
+}
+
+message GetBlockHashResponse {
+    uint32 disk_id = 1;
+    uint64 id = 2;
+    bytes hash = 3;
+    bool has_block = 4;
+    string error = 5;
+}
