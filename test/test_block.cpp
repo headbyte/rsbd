@@ -1,6 +1,7 @@
 
 #include <catch2/catch.hpp>
 #include <sstream>
+#include <iostream>
 #include "block.h"
 
 using namespace rsbd;
@@ -30,5 +31,48 @@ TEST_CASE("single block storage header test", "[single]") {
 }
 
 TEST_CASE("single block storage test", "[single]") {
+
+    SECTION("create a single file block storage") {
+        {
+            single_file_block_storage sfbs;
+            sfbs.create("/tmp/disk0.bin", 1, 8);
+
+            for (int i = 0; i < 8; ++i) {
+                block b;
+                b.id = i;
+                b.size = 1;
+                b.data.push_back(i);
+                sfbs.set_block(b);
+            }
+        }
+
+        {
+
+            single_file_block_storage sfbs;
+            sfbs.open("/tmp/disk0.bin");
+
+            REQUIRE(sfbs.get_block_count() == 8);
+            REQUIRE(sfbs.get_block_size(0) == 1);
+            // TODO: remove get_block_size id parameter since it is better to have all blocks same size
+
+            for (size_t i = 0; i < sfbs.get_block_count(); i++) {
+                REQUIRE(sfbs.has_block(i) == true);
+
+                block b;
+                REQUIRE (sfbs.get_block(i, b) == true);
+                REQUIRE(b.size == 1);
+                REQUIRE(b.id == i);
+                REQUIRE(b.data[0] == i);
+
+                auto hash = b.get_hash();
+                auto hash2 = sfbs.get_block_hash_from_header(i);
+
+                REQUIRE((hash == hash2) == true);
+            }
+
+        }
+
+    }
+
 
 }

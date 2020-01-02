@@ -10,6 +10,7 @@
 #include <cryptopp/sha.h>
 #include <fstream>
 #include <mutex>
+#include <iostream>
 
 #ifndef SRC_BLOCK_H_
 #define SRC_BLOCK_H_
@@ -61,6 +62,8 @@ namespace rsbd {
         virtual void set_block(block &b) = 0;
 
         virtual bool has_block(block_id_t id) = 0;
+
+        virtual bool delete_block(block_id_t id) = 0;
 
         virtual block_id_t get_block_count() = 0;
 
@@ -115,10 +118,14 @@ namespace rsbd {
     }
 
     struct single_file_block_storage_index : public serializable {
+
+        size_t block_map_start = 0;
         std::vector<char> block_map;
+
+        size_t hashes_start = 0;
         std::vector<block_hash> hashes;
 
-        block_id_t starting_block = 0;
+        block_id_t starting_block = 0; // UNUSED AT THE MOMENT, UPDATE GET,SET FUNCTIONS TO UTILISE THIS
         block_size_t block_size = 0;
         block_id_t block_count = 0;
         char magic[4]; // "RSBD"
@@ -126,11 +133,48 @@ namespace rsbd {
         //
         void init(block_id_t block_count) {
             std::memcpy(magic, "RSBD", 4);
-
+            set_block_count(block_count);
         }
 
         block_id_t get_block_count() const {
             return block_count;
+        }
+
+
+        size_t get_hashes_start() {
+            if (hashes_start != 0)
+                return hashes_start;
+
+            hashes_start = get_block_map_start() + block_count;
+            return hashes_start;
+        }
+
+        size_t get_block_map_start() {
+            if (block_map_start != 0)
+                return block_map_start;
+
+            block_map_start = block_size * block_count;
+            return block_map_start;
+        }
+
+        void update_block_information(std::ostream &output, block &b, bool delete_block = false) {
+            output.seekp(get_block_map_start() + b.id, std::ios_base::beg);
+            char exists = 1;
+            if (delete_block) {
+                exists = 0;
+                output.write(&exists, 1);
+                return;
+            }
+            output.write(&exists, 1);
+            block_map[b.id] = 1;
+
+
+            auto hash = b.get_hash();
+
+            output.seekp(get_hashes_start() + (b.id * sizeof(hash.hash)), std::ios_base::beg);
+            output.write((char *) hash.hash, sizeof(hash.hash));
+            std::memcpy(hashes[b.id].hash, hash.hash, sizeof(hash.hash));
+            hashes[b.id].calculated = true;
         }
 
         void set_block_count(block_id_t block_count) {
@@ -159,13 +203,18 @@ namespace rsbd {
 
         void reverse_deserialize(std::istream &input) {
             reverse_read(input, magic, 4);
+            if (std::memcmp(magic, "RSBD", 4) != 0) {
+                throw std::logic_error("header magic doesn't match");
+            }
+
             reverse_read(input, block_count);
             reverse_read(input, block_size);
             reverse_read(input, starting_block);
 
             set_block_count(block_count);
 
-            for (int i = 0; i < block_count; ++i) {
+            int i = block_count;
+            while (i-- > 0) {
                 reverse_read(input, hashes[i].hash, sizeof(hashes[i].hash));
             }
             reverse_read(input, this->block_map.data(), block_count);
@@ -185,14 +234,14 @@ namespace rsbd {
     struct single_file_block_storage : public block_storage {
         void open(std::string path) {
             this->path = path;
-            stream.open(path);
+            stream.open(path, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 
-            if (stream.good()) {
+            if (!is_ready()) {
                 throw std::runtime_error("file open failed");
             }
 
             stream.seekg(0, std::ios_base::end);
-            header.deserialize(stream);
+            header.reverse_deserialize(stream);
         }
 
         const std::string &get_path() const {
@@ -201,9 +250,9 @@ namespace rsbd {
 
         void create(std::string path, block_size_t block_size, block_id_t block_count) {
             this->path = path;
-            stream.open(path);
-            if (stream.good()) {
-                throw std::runtime_error("file open failed");
+            stream.open(path, std::ios_base::trunc | std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+            if (!is_ready()) {
+                throw std::runtime_error("file create failed");
             }
 
             size_t total_file_size = block_count * block_size;
@@ -230,6 +279,11 @@ namespace rsbd {
             if (header.block_map[id] == 0) {
                 return false;
             }
+
+            if (!is_ready()) {
+                throw std::logic_error("not ready");
+            }
+
             b.id = id;
             b.size = get_block_size(id);
             b.data.resize(b.size);
@@ -248,12 +302,37 @@ namespace rsbd {
             return header.block_size;
         }
 
-        virtual void set_block(rsbd::block &b) override {
+        bool delete_block(block_id_t id) override {
+            return false;
+        }
 
+        virtual void set_block(rsbd::block &b) override {
+            if (b.id < 0 && b.id >= header.block_count) {
+                throw std::range_error("out of range");
+            }
+
+            if (!is_ready()) {
+                throw std::logic_error("not ready");
+            }
+
+            std::lock_guard<std::mutex> guard(stream_mutex);
+            stream.seekp(get_block_position(b.id), std::ios_base::beg);
+            stream.write((char *) b.data.data(), b.size);
+
+            header.update_block_information(stream, b);
         }
 
         virtual block_id_t get_block_count() override {
             return header.block_count;
+        }
+
+        void close() {
+            std::lock_guard<std::mutex> guard(stream_mutex);
+            stream.close();
+        }
+
+        const block_hash &get_block_hash_from_header(block_id_t id) {
+            return header.hashes[id];
         }
 
     protected:
